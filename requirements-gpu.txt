@@ -1,0 +1,46 @@
+# ============================================================
+# Univ-Us_AI — GPU 전용 패키지
+#
+#            ⚠️  GPU 가 없으면 설치하지 마세요.
+#      이 파일 없이도 대부분의 기능을 개발할 수 있습니다.
+#
+# 언제 필요한가
+#   · pic_ai-agent  — 로컬 OCR / 이미지 모델을 직접 돌릴 때
+#   · rag_ai-agent  — 로컬 임베딩 모델을 쓸 때
+#   · eval_ai-agent — 오픈소스 모델을 API 모델과 비교할 때
+#
+# 설치
+#   nvidia-smi                              ← 먼저 드라이버 확인
+#   pip install -r requirements-gpu.txt     ← 약 3GB
+#   python -c "import torch; print(torch.cuda.is_available())"   ← True 여야 함
+#
+# CUDA Toolkit 을 따로 설치할 필요 없습니다.
+# 아래 휠 안에 CUDA 런타임이 들어 있고, 필요한 건 NVIDIA 드라이버뿐입니다.
+# ============================================================
+
+# ── PyTorch 휠 저장소 (CUDA 12.9 빌드) ──────────────────────
+#
+# 이 줄이 왜 필요한가:
+#   Windows 는 기본 PyPI 의 torch 가 CPU 전용입니다.
+#   이 줄이 없으면 설치는 되지만 torch.cuda.is_available() 이 False 가 됩니다.
+#   (Linux/WSL2 는 기본 PyPI 휠에도 CUDA 가 들어 있어 없어도 동작합니다)
+#
+# 다른 CUDA 버전이 필요하면 아래 주소의 cu129 부분만 바꾸세요.
+#   cu130  드라이버가 CUDA 13.x 인 경우
+#   cu129  대부분의 경우 (권장)
+#   cu126  드라이버가 오래되어 위 두 개가 안 될 때
+# 바꿔서 해결했다면 어떤 값을 썼는지 Issue 로 남겨주세요.
+--extra-index-url https://download.pytorch.org/whl/cu129
+
+torch>=2.13,<3
+torchvision>=0.28,<1
+
+# ── 모델 로딩 / 추론 ────────────────────────────────────────
+transformers>=5.0,<6
+accelerate>=1.10,<2
+sentence-transformers>=5.0,<6     # 로컬 임베딩 (EMBEDDING 슬롯 대안)
+
+# ── 이미지 처리 (pic_ai-agent) ──────────────────────────────
+timm>=1.0,<2
+opencv-python-headless>=4.10,<6
+einops>=0.8,<1

@@ -1,0 +1,20 @@
+# ============================================================
+# Univ-Us_AI conda 환경 정의
+#
+#   conda env create -f environment.yml
+#   conda activate univus-ai
+#
+# base 환경에 설치하지 마세요. 프로젝트 전용 환경을 씁니다.
+# GPU 패키지는 포함되어 있지 않습니다 → requirements-gpu.txt 참고
+# ============================================================
+name: univus-ai
+
+channels:
+  - conda-forge
+
+dependencies:
+  - python=3.11
+  - pip>=24.0
+  - pip:
+      - -r requirements.txt
+      - -r requirements-dev.txt

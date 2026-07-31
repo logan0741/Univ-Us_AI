@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 개발 규칙 (브랜치 · 커밋 · 이슈)
+    url: https://github.com/logan0741/Univ-Us_AI/blob/main/README.md
+    about: 브랜치 이름 규칙, 커밋 메시지 작성법, 환경 설치는 README 를 먼저 확인하세요.
+  - name: 기능별 MVP 정의
+    url: https://github.com/logan0741/Univ-Us_AI/blob/main/docs/AI_MODULES.md
+    about: 내가 맡은 기능의 입력·출력·완료 기준을 확인합니다.
