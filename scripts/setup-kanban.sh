@@ -7,7 +7,10 @@
 #   3) (선택) 생성한 이슈를 GitHub Project 에 카드로 추가
 #
 # 사전 준비
-#   gh auth login          ← GitHub CLI 로그인 (한 번만)
+#   gh auth login              ← GitHub CLI 로그인 (한 번만)
+#   gh auth refresh -s project ← 보드에 카드를 넣으려면 필수. 기본 로그인엔 없는 권한입니다
+#
+# gh 설치가 안 돼 있으면 → docs/서버-작업환경-설정.md 5장
 #
 # 실행
 #   bash scripts/setup-kanban.sh              라벨 + 이슈만
@@ -36,6 +39,18 @@ gh auth status >/dev/null 2>&1 || {
     echo "GitHub 로그인이 안 되어 있습니다.  gh auth login  을 먼저 실행하세요."
     exit 1
 }
+
+# 프로젝트에 카드를 넣으려면 project 권한이 따로 필요합니다.
+# 이게 없으면 이슈는 만들어지는데 카드만 조용히 실패해서, 먼저 막아둡니다.
+if [ -n "$PROJECT_NUMBER" ] && ! gh auth status 2>&1 | grep -q "project"; then
+    echo "GitHub 토큰에 'project' 권한이 없습니다."
+    echo "이대로 진행하면 이슈는 생성되지만 보드에 카드가 추가되지 않습니다."
+    echo
+    echo "  gh auth refresh -s project"
+    echo
+    echo "를 실행한 뒤 다시 시도하세요. (권한 없이 이슈만 만들려면 인자 없이 실행)"
+    exit 1
+fi
 
 # ── 라벨 정의 (README 6장) ──────────────────────────────────
 # 이름|색상|설명
