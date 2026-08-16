@@ -67,6 +67,18 @@ def cmd_weblogin():
     weblogin.run_weblogin()
 
 
+@app.command("parse")
+def cmd_parse(source: str = typer.Argument("timetable", help="현재: timetable")):
+    """수집한 원문을 구조화합니다 (LLM 미사용, 결정적 파서)."""
+    if source == "timetable":
+        from .parse.timetable import parse_latest
+        out = parse_latest()
+        typer.echo(f"파싱 완료: {out}")
+    else:
+        typer.echo(f"아직 지원 안 함: {source} (현재 timetable 만)")
+        raise typer.Exit(1)
+
+
 @app.command("status")
 def cmd_status():
     """세션 유효성과 소스별 마지막 실행을 보여줍니다."""
