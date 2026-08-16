@@ -80,15 +80,19 @@ def cmd_parse(source: str = typer.Argument("timetable", help="현재: timetable"
 
 
 @app.command("notices")
-def cmd_notices(site: str = typer.Argument("all", help="aisw/aicoss/nccoss/sojoong/all")):
-    """공개 게시판 공지 수집 (로그인 불필요, robots 준수)."""
+def cmd_notices(
+    site: str = typer.Argument("all", help="aisw/aicoss/nccoss/sojoong/all"),
+    pages: int = typer.Option(100, help="순회할 최대 페이지 수 (끝나면 자동 정지)"),
+    details: int = typer.Option(200, help="상세 본문을 받아올 신규 공지 최대 건수"),
+):
+    """공개 게시판 공지 수집 (로그인 불필요, robots 준수, 전 페이지)."""
     from . import notice
     keys = list(notice.SOURCES) if site == "all" else [site]
     for k in keys:
         if k not in notice.SOURCES:
             typer.echo(f"알 수 없는 사이트: {k} (가능: {', '.join(notice.SOURCES)})")
             raise typer.Exit(1)
-        notice.collect(k)
+        notice.collect(k, max_pages=pages, max_detail=details)
 
 
 @app.command("status")

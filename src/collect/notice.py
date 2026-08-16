@@ -16,7 +16,7 @@ import re
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from urllib.parse import urljoin
+from urllib.parse import parse_qs, urlencode, urljoin, urlparse, urlunparse
 from urllib.robotparser import RobotFileParser
 
 import httpx
@@ -162,7 +162,7 @@ _PARSERS = {"jnu_cms": _parse_jnu_cms, "kboard": _parse_kboard, "wp_kboard": _pa
 
 SOURCES = {
     "aisw": NoticeSource("aisw", "인공지능학부(학과)",
-        "https://aisw.jnu.ac.kr/aisw/518/subview.do?enc=Zm5jdDF8QEB8JTJGYmJzJTJGYWlzdyUyRjY0JTJGYXJ0Y2xMaXN0LmRvJTNGYmJzQ2xTZXElM0QlMjZiYnNPcGVuV3JkU2VxJTNENDUlMjZpc1ZpZXdNaW5lJTNEZmFsc2UlMjZzcmNoQ29sdW1uJTNEc2olMjZzcmNoV3JkJTNEJTI2",
+        "https://aisw.jnu.ac.kr/bbs/aisw/64/artclList.do?bbsOpenWrdSeq=45&srchColumn=sj&srchWrd=",
         "jnu_cms"),
     "aicoss": NoticeSource("aicoss", "인공지능혁신융합사업단",
         "https://www.aicoss.kr/www/notice/?cate=%EC%A0%84%EB%82%A8%EB%8C%80%ED%95%99%EA%B5%90", "kboard"),
@@ -171,6 +171,25 @@ SOURCES = {
     "sojoong": NoticeSource("sojoong", "소프트웨어중심사업단",
         "https://sojoong.kr/notice/notice-board/", "wp_kboard"),
 }
+
+
+
+def _page_url(src: NoticeSource, page: int) -> str:
+    """목록 페이지 URL 을 만든다 (sojoong=pageid, 나머지=page)."""
+    key = "pageid" if src.parser == "wp_kboard" else "page"
+    u = urlparse(src.list_url)
+    q = parse_qs(u.query)
+    q[key] = [str(page)]
+    return urlunparse(u._replace(query=urlencode(q, doseq=True)))
+
+
+def _canonical(url: str) -> str:
+    """중복판별용 정규화 — 페이지 파라미터(page/pageid)를 제거한다."""
+    u = urlparse(url)
+    q = parse_qs(u.query)
+    for k in ("page", "pageid"):
+        q.pop(k, None)
+    return urlunparse(u._replace(query=urlencode(q, doseq=True)))
 
 
 def _robots_ok(list_url: str) -> bool:
@@ -185,7 +204,8 @@ def _robots_ok(list_url: str) -> bool:
     return rp.can_fetch(USER_AGENT, list_url)
 
 
-def collect(source_key: str, *, fetch_detail: bool = True, max_detail: int = 40) -> dict:
+def collect(source_key: str, *, fetch_detail: bool = True,
+            max_detail: int = 200, max_pages: int = 100) -> dict:
     """한 사이트 공지 목록을 수집하고, 신규 공지의 상세 원문을 저장한다."""
     src = SOURCES[source_key]
     store_src = f"notice_{src.key}"
@@ -197,13 +217,29 @@ def collect(source_key: str, *, fetch_detail: bool = True, max_detail: int = 40)
     headers = {"User-Agent": USER_AGENT}
     try:
         with httpx.Client(timeout=20, follow_redirects=True, headers=headers) as cli:
-            r = cli.get(src.list_url)
-            r.raise_for_status()
-            notices = _PARSERS[src.parser](r.text, src.list_url)
+            # ── 여러 페이지 순회 ──────────────────────────────
+            notices: list[Notice] = []
+            run_seen: set[str] = set()
+            for page in range(1, max_pages + 1):
+                if page > 1:
+                    time.sleep(settings.jnu_collect_min_interval_sec)
+                r = cli.get(_page_url(src, page))
+                r.raise_for_status()
+                page_ns = _PARSERS[src.parser](r.text, src.list_url)
+                # 페이지 파라미터 제거해 정규화(중복판별용)
+                for n in page_ns:
+                    n.url = _canonical(n.url)
+                fresh = [n for n in page_ns if n.url not in run_seen]
+                if not fresh:
+                    break                      # 새 글이 없으면 마지막 페이지
+                for n in fresh:
+                    run_seen.add(n.url)
+                    notices.append(n)
             if not notices:
                 runlog.record_run(store_src, status="failed", detail="목록 파싱 0건 (구조 변경?)")
                 print(f"[{src.key}] 공지 0건 — 게시판 구조가 바뀌었을 수 있습니다")
                 return {"status": "failed"}
+            print(f"[{src.key}] 목록 {len(notices)}건 수집 ({page}페이지까지)")
 
             # 목록(메타)을 processed 로 저장
             out_dir = settings.data_dir / "processed" / "notices"
