@@ -75,7 +75,7 @@ def browser_page(headless: bool = True):
     sync_playwright = _require_playwright()
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=headless)
-        context = browser.new_context(storage_state=str(settings.session_path))
+        context = browser.new_context(storage_state=str(settings.session_path), accept_downloads=True)
         page = context.new_page()
         page.set_default_timeout(settings.jnu_page_timeout_ms)
         try:

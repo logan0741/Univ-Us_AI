@@ -30,6 +30,10 @@ class CollectSettings(BaseSettings):
     jnu_collect_min_interval_sec: float = 3.0
     jnu_page_timeout_ms: int = 30000
 
+    # 계획서 수집 대상 학기 (2026-2)
+    syllabus_yy: str = "2026"
+    syllabus_term: str = "2"
+
     # ── StdAuth 재학인증 (선택) ───────────────────────────────
     jnu_stdauth_base_url: str = "https://jnuapi.jnu.ac.kr"
     jnu_stdauth_apikey: str = ""
