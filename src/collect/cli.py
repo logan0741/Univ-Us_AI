@@ -57,6 +57,16 @@ def cmd_collect_all(tag: str = typer.Option("service")):
         cls().run(tag=tag)
 
 
+@app.command("weblogin")
+def cmd_weblogin():
+    """서버에서 실제 브라우저를 웹으로 띄워 직접 로그인합니다 (통합인증·휴대폰 인증 대응).
+
+    헤드리스 서버에서 login 대신 씁니다. 먼저 `bash scripts/setup-weblogin.sh` 필요.
+    """
+    from . import weblogin
+    weblogin.run_weblogin()
+
+
 @app.command("status")
 def cmd_status():
     """세션 유효성과 소스별 마지막 실행을 보여줍니다."""
