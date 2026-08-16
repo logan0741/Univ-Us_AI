@@ -79,6 +79,18 @@ def cmd_parse(source: str = typer.Argument("timetable", help="현재: timetable"
         raise typer.Exit(1)
 
 
+@app.command("notices")
+def cmd_notices(site: str = typer.Argument("all", help="aisw/aicoss/nccoss/sojoong/all")):
+    """공개 게시판 공지 수집 (로그인 불필요, robots 준수)."""
+    from . import notice
+    keys = list(notice.SOURCES) if site == "all" else [site]
+    for k in keys:
+        if k not in notice.SOURCES:
+            typer.echo(f"알 수 없는 사이트: {k} (가능: {', '.join(notice.SOURCES)})")
+            raise typer.Exit(1)
+        notice.collect(k)
+
+
 @app.command("status")
 def cmd_status():
     """세션 유효성과 소스별 마지막 실행을 보여줍니다."""
