@@ -36,7 +36,7 @@ def test_kboard_movepageview():
     </tbody></table>"""
     ns = _parse_kboard(html, "https://www.aicoss.kr/www/notice/?cate=x")
     assert len(ns) == 1
-    assert ns[0].url == "https://www.aicoss.kr/www/notice/?mod=document&uid=4091"
+    assert ns[0].url == "https://www.aicoss.kr/www/notice/view/4091?bd=notice"
     assert ns[0].date == "2026-08-10"
     assert "New" not in ns[0].title
 

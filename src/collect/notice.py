@@ -102,7 +102,7 @@ def _parse_kboard(html: str, list_url: str) -> list[Notice]:
                 break
         title = re.sub(r"\s*New\s*", " ", a.get_text(" ", strip=True)).strip()
         out.append(Notice(title=title,
-                           url=f"{base}?mod=document&uid={m.group(1)}",
+                           url=f"{base}view/{m.group(1)}?bd=notice",
                            date=date, category=cat))
     return out
 
@@ -125,6 +125,37 @@ def _parse_wp_kboard(html: str, list_url: str) -> list[Notice]:
             seen.add(n.url)
             uniq.append(n)
     return uniq
+
+
+
+# ── 상세 본문·첨부 추출 ─────────────────────────────────────
+_BODY_SEL = {
+    "jnu_cms": ".view-con",
+    "kboard": "section.viewContainer, .viewContainer-wrap",
+    "wp_kboard": ".kboard-content, .kboard-document-content",
+}
+_FILE_EXT = (".pdf", ".hwp", ".hwpx", ".doc", ".docx", ".xls", ".xlsx",
+             ".ppt", ".pptx", ".zip", ".jpg", ".png")
+
+
+def extract_detail(html: str, parser: str, page_url: str) -> dict:
+    """상세 페이지 HTML → {body, attachments}. 네비/헤더/푸터는 제거한다."""
+    soup = BeautifulSoup(html, "lxml")
+    for tag in soup.select(
+        "script,style,header,footer,nav,.gnb,.lnb,.snb,#header,#footer,#gnb,.header,.footer,.quick,.top"
+    ):
+        tag.decompose()
+    el = soup.select_one(_BODY_SEL.get(parser, "body"))
+    body = el.get_text("\n", strip=True) if el else ""
+
+    atts = []
+    for a in soup.find_all("a", href=True):
+        h = a["href"]
+        name = a.get_text(strip=True)
+        if any(k in h.lower() for k in ("download", "file_down", "attach", "fileDown")) \
+                or h.lower().endswith(_FILE_EXT):
+            atts.append({"name": name, "url": urljoin(page_url, h)})
+    return {"body": body, "attachments": atts}
 
 
 _PARSERS = {"jnu_cms": _parse_jnu_cms, "kboard": _parse_kboard, "wp_kboard": _parse_wp_kboard}
@@ -204,6 +235,16 @@ def collect(source_key: str, *, fetch_detail: bool = True, max_detail: int = 40)
                         extra_meta={"title": n.title, "date": n.date,
                                     "category": n.category, "board": src.name},
                     )
+                    # 본문·첨부 추출 → 구조화 저장 (원문은 위에서 보존)
+                    detail = extract_detail(dr.text, src.parser, n.url)
+                    doc_dir = out_dir / src.key
+                    doc_dir.mkdir(parents=True, exist_ok=True)
+                    safe = n.url.replace("/", "_").replace("?", "_")[:80]
+                    (doc_dir / f"{safe}.json").write_text(json.dumps({
+                        "title": n.title, "date": n.date, "category": n.category,
+                        "board": src.name, "url": n.url,
+                        "body": detail["body"], "attachments": detail["attachments"],
+                    }, ensure_ascii=False, indent=2), encoding="utf-8")
                     new += 1
     except Exception as e:  # noqa: BLE001 — 조용히 실패하지 않는다(§4.4)
         runlog.record_run(store_src, status="failed", detail=repr(e))
