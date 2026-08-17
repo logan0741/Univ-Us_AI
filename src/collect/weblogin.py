@@ -27,7 +27,7 @@ from pathlib import Path
 from .config import settings
 
 DISPLAY = ":99"
-SCREEN = "1280x800x24"
+SCREEN = "1280x800x16"  # 16bit 색심도 = 대역폭↓ (noVNC 속도↑)
 VNC_PORT = 5900
 WEB_PORT = int(os.environ.get("WEBLOGIN_PORT", "6080"))
 NOVNC_DIR = "/usr/share/novnc"
@@ -84,7 +84,8 @@ def run_weblogin() -> None:
         # 2) VNC (localhost 전용 — SSH 터널로만)
         procs.append(subprocess.Popen(
             ["x11vnc", "-display", DISPLAY, "-rfbport", str(VNC_PORT),
-             "-localhost", "-nopw", "-forever", "-shared", "-quiet"],
+             "-localhost", "-nopw", "-forever", "-shared", "-quiet",
+             "-threads", "-ncache", "10", "-ncache_cr", "-wait", "20"],
             env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         ))
         time.sleep(1)

@@ -16,7 +16,7 @@ from datetime import date, datetime, timezone
 
 import httpx
 
-from . import runlog
+from . import download, runlog
 from .config import settings
 
 UA = "Mozilla/5.0 (Univ-Us activity collector)"
@@ -67,6 +67,7 @@ def _norm(src: ExtSource, it: dict) -> dict:
         "period_ended": _period_ended(end),   # 기간 종료 여부
         "view_count": it.get("viewCount"),
         "region": it.get("region"),
+        "image": it.get("image"),
         "url": f"https://www.campuspick.com/{src.web_path}/{it.get('id')}",
     }
 
@@ -95,6 +96,14 @@ def collect(source_key: str, *, scrolls: int = 2, limit: int = 20) -> dict:
         return {"status": "failed", "error": repr(e)}
 
     rows = list(items.values())
+    # 각 항목 대표 이미지(썸네일/포스터) 다운로드
+    imgs = 0
+    with httpx.Client(timeout=20, headers=_HDR) as icli:
+        for it in rows:
+            if it.get("image"):
+                meta = download.download(it["image"], source_key, icli, subdir="poster")
+                if meta and meta.get("path"):
+                    it["image_path"] = meta["path"]; imgs += 1
     ended = sum(1 for x in rows if x["period_ended"])
     out_dir = settings.data_dir / "processed" / "external"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -106,5 +115,5 @@ def collect(source_key: str, *, scrolls: int = 2, limit: int = 20) -> dict:
     }, ensure_ascii=False, indent=2), encoding="utf-8")
 
     runlog.record_run(source_key, status="ok", items_total=len(rows))
-    print(f"[{src.key}] {src.name} — {len(rows)}건 (마감 {ended} · 진행중 {len(rows)-ended})")
-    return {"status": "ok", "total": len(rows), "ended": ended}
+    print(f"[{src.key}] {src.name} — {len(rows)}건 (마감 {ended} · 이미지 {imgs})")
+    return {"status": "ok", "total": len(rows), "ended": ended, "images": imgs}
