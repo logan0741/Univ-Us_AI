@@ -26,6 +26,8 @@ UA = "Mozilla/5.0 (Univ-Us activity collector)"
 
 TYPES = {"contest": ("1", "공모전"), "activity": ("2", "대외활동")}
 
+_INTERVAL = 1.0  # 요청 간격(초) — 공개 사이트, 폴라이트 유지
+
 
 def _txt(html: str) -> str:
     return BeautifulSoup(html or "", "lxml").get_text(" ", strip=True)
@@ -88,6 +90,8 @@ def collect(type_key: str, *, scrolls: int = 2, max_detail: int = 30) -> dict:
     hdr = {"User-Agent": UA, "Referer": f"{BASE}/list/contest/{t}/1",
            "X-Requested-With": "XMLHttpRequest"}
 
+    est = int((scrolls + 1 + max_detail) * _INTERVAL) + 5
+    print(f"[{store}] {name} 수집 시작 — 목록 {scrolls+1}p + 상세 {max_detail}건 (약 {est}초)")
     items: dict = {}
     try:
         with httpx.Client(timeout=25, verify=ca, follow_redirects=True, headers=hdr) as cli:
@@ -102,14 +106,16 @@ def collect(type_key: str, *, scrolls: int = 2, max_detail: int = 30) -> dict:
                     it = _parse_row(row)
                     if it["id"] and it["id"] not in items:
                         items[it["id"]] = it
-                time.sleep(settings.jnu_collect_min_interval_sec)
+                time.sleep(_INTERVAL)
+            print(f"[{store}] 목록 {len(items)}건 — 상세·첨부 다운로드 중...")
 
             # 상세 + 첨부 다운로드 (max_detail 건까지)
-            for i, it in enumerate(items.values()):
-                if i >= max_detail:
-                    break
-                time.sleep(settings.jnu_collect_min_interval_sec)
+            targets = list(items.values())[:max_detail]
+            for i, it in enumerate(targets, 1):
+                time.sleep(_INTERVAL)
                 it.update(_fetch_detail(it, cli, type_key))
+                if i % 5 == 0 or i == len(targets):
+                    print(f"[{store}]   상세 {i}/{len(targets)}...")
     except Exception as e:  # noqa: BLE001
         runlog.record_run(store, status="failed", detail=repr(e))
         print(f"[{store}] 실패: {e!r}")
