@@ -11,8 +11,8 @@
 from __future__ import annotations
 
 import json
-from contextlib import suppress
 import time
+from contextlib import suppress
 from datetime import datetime
 
 from rich.console import Group
