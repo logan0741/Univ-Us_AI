@@ -22,7 +22,7 @@ from urllib.robotparser import RobotFileParser
 import httpx
 from bs4 import BeautifulSoup
 
-from . import download, runlog, storage
+from . import dedup, download, runlog, storage
 from .config import settings
 
 USER_AGENT = "Univ-Us-Bot/0.1 (+academic notice collector; contact: team channel)"
@@ -252,7 +252,7 @@ def collect(source_key: str, *, fetch_detail: bool = True,
             }, ensure_ascii=False, indent=2), encoding="utf-8")
 
             # 신규 공지의 상세 원문 저장 (이미 본 URL 은 건너뜀 = 예의)
-            new = 0
+            new, dup = 0, 0
             if fetch_detail:
                 seen = _seen_urls(store_src)
                 for n in notices:
@@ -265,14 +265,22 @@ def collect(source_key: str, *, fetch_detail: bool = True,
                     except Exception as e:  # noqa: BLE001
                         print(f"    상세 실패 {n.url[:60]}: {e!r}")
                         continue
+                    # 본문·첨부 추출 → 구조화 저장 (원문은 아래에서 보존)
+                    detail = extract_detail(dr.text, src.parser, n.url)
+                    # 게시판 간 중복(§4.3): 같은 글이 다른 게시판에 있으면 저장하지 않음
+                    ckey = dedup.content_key(n.title, detail["body"])
+                    prev = dedup.seen_content(ckey)
+                    if prev and prev.get("source") != store_src:
+                        dup += 1
+                        print(f"    중복(={prev['source']}) 건너뜀: {n.title[:40]}")
+                        continue
+                    dedup.remember_content(ckey, source=store_src, item_id=n.url, url=n.url)
                     storage.save_original(
                         source=store_src, item_id=n.url, url=n.url,
                         data=dr.text.encode("utf-8"), ext="html", tag="service",
                         extra_meta={"title": n.title, "date": n.date,
                                     "category": n.category, "board": src.name},
                     )
-                    # 본문·첨부 추출 → 구조화 저장 (원문은 위에서 보존)
-                    detail = extract_detail(dr.text, src.parser, n.url)
                     # 첨부파일(pdf/hwp 등) 실제 다운로드 (원문 바이너리 보존)
                     for att in detail["attachments"]:
                         meta = download.download(att["url"], store_src, cli, subdir="files")
@@ -293,8 +301,9 @@ def collect(source_key: str, *, fetch_detail: bool = True,
         return {"status": "failed", "error": repr(e)}
 
     runlog.record_run(store_src, status="ok", items_total=len(notices), items_new=new)
-    print(f"[{src.key}] {src.name} — 목록 {len(notices)}건, 신규 상세 {new}건 저장")
-    return {"status": "ok", "total": len(notices), "new": new}
+    print(f"[{src.key}] {src.name} — 목록 {len(notices)}건, 신규 상세 {new}건 저장"
+          + (f", 중복 {dup}건 건너뜀" if dup else ""))
+    return {"status": "ok", "total": len(notices), "new": new, "dup": dup}
 
 
 def _seen_urls(store_src: str) -> set[str]:

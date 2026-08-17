@@ -15,6 +15,9 @@ WHAT="${1:-all}"
 
 run() { echo -e "\n\033[1;36m▶ $*\033[0m"; python -m src.collect.cli "$@"; }
 
+# 기존 데이터로 중복 방지 레지스트리를 먼저 시드(§4.3) — 이번 수집이 중복을 피하도록
+run dedup
+
 if [[ "$WHAT" == "all" || "$WHAT" == "notices" ]]; then
   # 4개 게시판: 전 페이지 순회 + 신규 전량 상세·첨부
   for s in aisw aicoss nccoss sojoong; do
@@ -31,6 +34,7 @@ if [[ "$WHAT" == "all" || "$WHAT" == "external" ]]; then
   run external all --scrolls 30
 fi
 
-echo -e "\n\033[1;32m✔ 완료 — 집계 생성 중\033[0m"
-python -m src.collect.cli report
-echo "→ docs/수집-집계.md"
+echo -e "\n\033[1;32m✔ 완료 — 중복 점검 + 집계 생성 중\033[0m"
+python -m src.collect.cli dedup      # 최종 중복 점검 → docs/중복-점검.md
+python -m src.collect.cli report     # 집계 → docs/수집-집계.md
+echo "→ docs/수집-집계.md · docs/중복-점검.md"

@@ -130,6 +130,21 @@ def cmd_monitor():
     monitor.run_monitor()
 
 
+@app.command("dedup")
+def cmd_dedup(
+    fix: bool = typer.Option(False, "--fix", help="여분 파일을 data/_dupes 로 격리(삭제 아님)"),
+    out: str = typer.Option("docs/중복-점검.md", help="점검 리포트 md 경로"),
+):
+    """중복 저장 전체 점검(§4.3). data/ 를 훑어 겹친 파일·글을 보고하고 방지 레지스트리를 갱신."""
+    from . import dedup
+    s = dedup.audit(fix=fix, out=out)
+    typer.echo(f"파일 중복 그룹 {s['file_dup_groups']} (여분 {s['extra_files']}개 · {s['waste_mb']}MB)")
+    typer.echo(f"내용 중복 그룹 {s['record_dup_groups']} (게시판·카테고리 간)")
+    if fix:
+        typer.echo(f"격리 {s['quarantined']}개 → data/_dupes/")
+    typer.echo(f"리포트: {out}")
+
+
 @app.command("report")
 def cmd_report(out: str = typer.Argument("docs/수집-집계.md", help="출력 md 경로")):
     """수집 데이터 집계 리포트를 md 로 생성 (data/ 스캔)."""

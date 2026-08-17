@@ -12,6 +12,7 @@ from urllib.parse import unquote, urlparse
 
 import httpx
 
+from . import dedup
 from .config import settings
 
 
@@ -33,9 +34,17 @@ def download(url: str, source: str, client: httpx.Client, *,
     except Exception as e:  # noqa: BLE001 — 개별 첨부 실패는 스킵
         return {"url": url, "error": repr(e)}
     ct = r.headers.get("content-type", "")
+    # 중복 방지(§4.3): 같은 바이트가 이미 저장돼 있으면 다시 쓰지 않고 그 경로를 돌려준다.
+    h = dedup.file_hash(r.content)
+    existing = dedup.seen_file(h)
+    if existing:
+        return {"url": url, "path": existing, "bytes": len(r.content),
+                "content_type": ct, "dup": True}
     ext = ".pdf" if "pdf" in ct else (".png" if "png" in ct else (".jpg" if "jpeg" in ct else ""))
     d = settings.raw_dir(source) / subdir
     d.mkdir(parents=True, exist_ok=True)
     fname = _safe_name(url, ext)
     (d / fname).write_bytes(r.content)
-    return {"url": url, "path": str(d / fname), "bytes": len(r.content), "content_type": ct}
+    dedup.remember_file(h, str(d / fname))
+    return {"url": url, "path": str(d / fname), "bytes": len(r.content),
+            "content_type": ct, "dup": False}
