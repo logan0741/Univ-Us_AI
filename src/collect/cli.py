@@ -110,6 +110,19 @@ def cmd_external(
         external.collect(k, scrolls=scrolls)
 
 
+@app.command("allcon")
+def cmd_allcon(
+    type_key: str = typer.Argument("all", help="contest/activity/all"),
+    scrolls: int = typer.Option(2, help="스크롤 횟수(page)"),
+    details: int = typer.Option(30, help="상세·첨부 다운로드할 건수"),
+):
+    """올콘 공모전·대외활동 수집 (카테고리별 저장 + 상세 포스터/PDF 다운로드)."""
+    from . import allcon
+    keys = ["contest", "activity"] if type_key == "all" else [type_key]
+    for k in keys:
+        allcon.collect(k, scrolls=scrolls, max_detail=details)
+
+
 @app.command("status")
 def cmd_status():
     """세션 유효성과 소스별 마지막 실행을 보여줍니다."""

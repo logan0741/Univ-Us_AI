@@ -22,7 +22,7 @@ from urllib.robotparser import RobotFileParser
 import httpx
 from bs4 import BeautifulSoup
 
-from . import runlog, storage
+from . import download, runlog, storage
 from .config import settings
 
 USER_AGENT = "Univ-Us-Bot/0.1 (+academic notice collector; contact: team channel)"
@@ -273,6 +273,11 @@ def collect(source_key: str, *, fetch_detail: bool = True,
                     )
                     # 본문·첨부 추출 → 구조화 저장 (원문은 위에서 보존)
                     detail = extract_detail(dr.text, src.parser, n.url)
+                    # 첨부파일(pdf/hwp 등) 실제 다운로드 (원문 바이너리 보존)
+                    for att in detail["attachments"]:
+                        meta = download.download(att["url"], store_src, cli, subdir="files")
+                        if meta and meta.get("path"):
+                            att["path"] = meta["path"]
                     doc_dir = out_dir / src.key
                     doc_dir.mkdir(parents=True, exist_ok=True)
                     safe = n.url.replace("/", "_").replace("?", "_")[:80]
