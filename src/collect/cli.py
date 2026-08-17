@@ -130,6 +130,14 @@ def cmd_monitor():
     monitor.run_monitor()
 
 
+@app.command("report")
+def cmd_report(out: str = typer.Argument("docs/수집-집계.md", help="출력 md 경로")):
+    """수집 데이터 집계 리포트를 md 로 생성 (data/ 스캔)."""
+    from . import report
+    path = report.run(out)
+    typer.echo(f"집계 생성: {path}")
+
+
 @app.command("status")
 def cmd_status():
     """세션 유효성과 소스별 마지막 실행을 보여줍니다."""
