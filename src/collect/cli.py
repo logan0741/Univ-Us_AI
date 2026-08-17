@@ -95,6 +95,21 @@ def cmd_notices(
         notice.collect(k, max_pages=pages, max_detail=details)
 
 
+@app.command("external")
+def cmd_external(
+    source: str = typer.Argument("all", help="campuspick_contest/activity/education/job/all"),
+    scrolls: int = typer.Option(2, help="스크롤 횟수 (offset 0..20*N)"),
+):
+    """대외활동·공모전·채용·교육 수집 (campuspick 등, robots 허용된 공개 API)."""
+    from . import external
+    keys = list(external.SOURCES) if source == "all" else [source]
+    for k in keys:
+        if k not in external.SOURCES:
+            typer.echo(f"알 수 없는 소스: {k} (가능: {', '.join(external.SOURCES)})")
+            raise typer.Exit(1)
+        external.collect(k, scrolls=scrolls)
+
+
 @app.command("status")
 def cmd_status():
     """세션 유효성과 소스별 마지막 실행을 보여줍니다."""
