@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import json
+import pathlib
 import time
 from contextlib import suppress
 from datetime import datetime
@@ -55,10 +56,48 @@ def _status_style(st: str | None) -> str:
     return {"ok": "green", "failed": "red", "login_required": "yellow"}.get(st or "", "dim")
 
 
+
+def _active_collectors() -> list[str]:
+    """지금 돌고 있는 수집 프로세스(cli) 목록 — /proc 스캔."""
+    out = []
+    proc = pathlib.Path("/proc")
+    for pd in proc.glob("[0-9]*"):
+        try:
+            cmd = (pd / "cmdline").read_bytes().replace(b"\x00", b" ").decode(errors="replace")
+        except OSError:
+            continue
+        if "src.collect.cli" in cmd and "monitor" not in cmd:
+            for word in ("collect", "notices", "external", "allcon", "weblogin"):
+                if f" {word}" in cmd:
+                    out.append(word + " " + cmd.split(word, 1)[1].strip().split(" ")[0])
+                    break
+    return out
+
+
+def _recent(source: str, within: float = 10.0) -> bool:
+    """최근 within 초 안에 원문/실행로그가 바뀌었나 (= 지금 수집 중 신호)."""
+    now = time.time()
+    for path in (settings.runlog_path(source), settings.raw_dir(source)):
+        try:
+            if path.exists() and now - path.stat().st_mtime < within:
+                return True
+            if path.is_dir():
+                for f in path.rglob("*"):
+                    if now - f.stat().st_mtime < within:
+                        return True
+        except OSError:
+            pass
+    return False
+
+
 def _render() -> Group:
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # noqa: DTZ005
+    active = _active_collectors()
+    head = (f"[bold green]🟢 수집 중: {', '.join(active)}[/]" if active
+            else "[dim]⚪ 대기 중 (수집 프로세스 없음 — 다른 터미널에서 collect/notices/allcon 실행)[/]")
 
-    t = Table(title=f"Univ-Us 크롤링 실시간 모니터   {now}", expand=True)
+    t = Table(title=f"Univ-Us 크롤링 실시간 모니터   {now}\n{head}", expand=True)
+    t.add_column("", width=2)
     t.add_column("소스", style="cyan", no_wrap=True)
     t.add_column("마지막 실행", justify="center")
     t.add_column("상태", justify="center")
@@ -73,7 +112,8 @@ def _render() -> Group:
         st = run["status"] if run else None
         ts = run["ts"][11:19] if run else "-"
         total = str(run.get("items_total", "")) if run else ""
-        t.add_row(src, ts, f"[{_status_style(st)}]{st or '-'}[/]",
+        live = "[bold green]●[/]" if _recent(src) else ""
+        t.add_row(live, src, ts, f"[{_status_style(st)}]{st or '-'}[/]",
                   total, str(raw or ""), str(files or ""), str(poster or ""))
 
     # 카테고리 세부 (allcon / notices)
