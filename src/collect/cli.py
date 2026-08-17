@@ -123,6 +123,13 @@ def cmd_allcon(
         allcon.collect(k, scrolls=scrolls, max_detail=details)
 
 
+@app.command("monitor")
+def cmd_monitor():
+    """실시간 크롤링 모니터 (1초 갱신, 사이트·카테고리별). 옆 터미널에서 실행."""
+    from . import monitor
+    monitor.run_monitor()
+
+
 @app.command("status")
 def cmd_status():
     """세션 유효성과 소스별 마지막 실행을 보여줍니다."""
