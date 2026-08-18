@@ -34,3 +34,6 @@ icalendar>=6.0,<7
 # Xvfb·x11vnc·noVNC·websockify 가 필요합니다. 이건 시스템 패키지라
 # pip 이 아니라 아래 스크립트로 설치합니다:
 #   bash scripts/setup-weblogin.sh
+
+# 강의계획서 PDF 텍스트 추출 (라벨링 seed 생성)
+pypdf
