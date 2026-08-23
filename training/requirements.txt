@@ -1,0 +1,11 @@
+# LLM 파인튜닝(LoRA/QLoRA) 의존성.
+#   pip install -r training/requirements.txt
+# torch 는 이미 서버 venv(~/.venv/univus-ai)에 있음(2.13+cu129). 캐글엔 기본 포함.
+transformers>=4.44
+datasets>=2.20
+peft>=0.12
+trl>=0.9
+accelerate>=0.33
+bitsandbytes>=0.43     # 4-bit(QLoRA) — CUDA 필요. 로컬 9.5GiB 필수
+sentencepiece
+kaggle                 # 캐글 데이터/커널 다운로드용

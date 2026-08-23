@@ -1,0 +1,16 @@
+# 캐글에서 받은 데이터/코드, 학습 산출물은 커밋하지 않음(용량·라이선스)
+# 단, 폴더 구조는 유지되게 .gitkeep 만 예외로 추적
+data/*
+code/*
+outputs/*
+!data/.gitkeep
+!code/.gitkeep
+!outputs/.gitkeep
+__pycache__/
+*.pyc
+*.bin
+*.safetensors
+*.pt
+*.ckpt
+wandb/
+.cache/
