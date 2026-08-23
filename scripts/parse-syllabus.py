@@ -2,8 +2,12 @@
 """강의계획서 PDF → 항목별 구조화 JSON (규칙 기반, LLM 미사용 = 비용 0).
 
 JNU 수업계획서 양식은 라벨이 고정이라 정규식으로 항목을 분리한다.
-  python scripts/parse-syllabus.py [입력폴더] [출력폴더] [--limit N]
+  python scripts/parse-syllabus.py [입력] [출력폴더] [--limit N]
+  · 입력 = 폴더면 그 안의 *.pdf 전부, 파일 하나면 그것만
 기본 입력: Univ-Us_AI-agent/수업계획서   출력: data/processed/syllabus
+
+예) 나중에 받은 계획서 하나를 JSON 으로:
+  python scripts/parse-syllabus.py ~/받은계획서.pdf data/processed/syllabus
 """
 from __future__ import annotations
 
@@ -157,7 +161,11 @@ def main() -> None:
     args = ap.parse_args()
 
     out = Path(args.outdir); out.mkdir(parents=True, exist_ok=True)
-    pdfs = sorted(Path(args.indir).glob("*.pdf"))
+    inp = Path(args.indir)
+    # PDF 파일 하나든 폴더든 받는다 (새 계획서 1개만 변환할 때 편하게)
+    pdfs = [inp] if inp.is_file() and inp.suffix.lower() == ".pdf" else sorted(inp.glob("*.pdf"))
+    if not pdfs:
+        print(f"PDF 를 못 찾음: {inp}"); return
     if args.limit:
         pdfs = pdfs[:args.limit]
 
