@@ -123,6 +123,26 @@ def cmd_allcon(
         allcon.collect(k, scrolls=scrolls, max_detail=details)
 
 
+@app.command("pipeline")
+def cmd_pipeline(
+    stages: list[str] = typer.Argument(None, help="public/auth/parse/finalize (생략 시 전체)"),
+    tag: str = typer.Option("service", help="eval / train / service (§5.3)"),
+    pages: int = typer.Option(100, help="notices: 순회할 최대 페이지 수"),
+    details: int = typer.Option(200, help="notices: 상세 본문 수집 건수"),
+    scrolls: int = typer.Option(2, help="external·allcon: 스크롤 횟수"),
+):
+    """수집 파이프라인 실행 — 단계별 수집을 순서대로 묶어 돌립니다.
+
+    public(공개 수집) → auth(본인 학사) → parse(구조화) → finalize(중복점검·집계).
+    `python -m src.collect.pipeline` 과 동일합니다.
+    """
+    from .pipeline import run_pipeline
+    results = run_pipeline(list(stages) or None, tag=tag,
+                           pages=pages, details=details, scrolls=scrolls)
+    if any(r.status == "failed" for r in results):
+        raise typer.Exit(1)
+
+
 @app.command("monitor")
 def cmd_monitor():
     """실시간 크롤링 모니터 (1초 갱신, 사이트·카테고리별). 옆 터미널에서 실행."""

@@ -29,12 +29,36 @@
 | --- | --- |
 | [**docs/SSH-서버-접속-가이드.md**](docs/SSH-서버-접속-가이드.md) | 학교 서버에 **접속**할 때 — SSH 설정, VS Code Remote-SSH |
 | [**docs/서버-작업환경-설정.md**](docs/서버-작업환경-설정.md) | 접속한 뒤 **개발 환경을 세팅**할 때 — venv 설치·재설치, GitHub push 용 SSH 키, `gh` 설치, pod 재시작 복구 |
+| [**src/collect/README.md**](src/collect/README.md) | **크롤링 코드가 어떻게 생겼는지** — 파이프라인 4단계, 기능별 파일 지도, 실행법 |
 | [**docs/크롤링-사용법.md**](docs/크롤링-사용법.md) | 본인 학사 데이터를 **수집**할 때 — 로그인 세션 재사용, 강의계획서·시간표·eClass |
 | [**docs/크롤링-매뉴얼.md**](docs/크롤링-매뉴얼.md) | 수집의 **전체 동작·데이터 저장 방식**을 세세하게 (원문/메타/인덱스/구조화 스키마) |
 | [**docs/수집-데이터-현황.md**](docs/수집-데이터-현황.md) | **어떤 사이트에서 무엇을 수집 중인지** 현황·건수·robots 상태 |
 
 > 위 문서에 없는 것 — **기술 스택 원칙(4.3), 프로젝트 목표(G1~G4), 협업 규칙(6.2)** — 은
 > 계획서 원본에만 있습니다. 원본은 개인정보가 포함되어 있어 저장소에 두지 않으니 팀 채널에서 받으세요.
+
+---
+
+## 크롤링 빠른 시작
+
+이 폴더에서 바로 수집을 돌리는 최소 절차입니다. 상세는 [src/collect/README.md](src/collect/README.md) 참고.
+
+```bash
+# 0) 환경 (최초 1회) — 3장 개발 환경 설치를 마친 상태에서
+pip install -r requirements-collect.txt
+playwright install chromium        # 로그인 수집(auth)용 — 공개 수집만 하면 생략 가능
+cp .env.example .env               # 이미 있으면 생략
+
+# 1) 로그인 없이 되는 공개 수집 + 집계 (공지·캠퍼스픽·올콘)
+python -m src.collect.pipeline public finalize
+
+# 2) 본인 학사 데이터까지 전부 (수강내역·시간표·강의계획서·eClass)
+python -m src.collect.cli login    # 브라우저 로그인 → 세션 저장 (비밀번호 저장 안 함)
+python -m src.collect.pipeline     # public → auth → parse → finalize 전체 실행
+```
+
+수집물은 전부 `data/` (gitignored) 아래에 저장됩니다. 진행 상황은 옆 터미널에서
+`python -m src.collect.cli monitor` 로 볼 수 있습니다.
 
 ---
 
